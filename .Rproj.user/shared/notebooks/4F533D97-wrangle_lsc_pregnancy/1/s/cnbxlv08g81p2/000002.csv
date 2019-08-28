@@ -1,0 +1,48 @@
+"0","```r
+lscr_table_pregnancy_stressors <-
+  lscr_preg %>% 
+  select(
+    preg_sev_vars
+  ) %>% 
+  gather(type, rating, sev_preg_disas:sev_preg_other2) %>% 
+  group_by(type) %>% 
+  count(endorsed = !is.na(rating)) %>% 
+  ungroup() %>% 
+  filter(endorsed) %>% 
+  mutate(
+    type = str_replace(type, \"sev_preg_\", \"\")
+  ) %>% 
+  select(-endorsed)
+types_preg_names <-
+  lscr_table_pregnancy_stressors %>% 
+  select(type) %>% 
+  mutate(type = as.factor(type)) %>% 
+  pull(type) %>% 
+  levels()
+lscr_table_pregnancy_stressors %>% 
+  mutate(
+    type = factor(
+      type,
+      levels = types_preg_names,
+      labels = c(
+        \"accident (self)\",
+        \"caretaker for close other\",
+        \"expected death of close other\",
+        \"divorce (self)\",
+        \"emotional abuse\",
+        \"financial problems\",
+        \"other (anything additional)\",
+        \"separated from child\",
+        \"sexual harassment\",
+        \"witnessed accident\"
+      )
+    )
+  ) %>% 
+  group_by(type) %>% 
+  summarise(
+    n = sum(n),
+    `proportion endorsed` = round(n / N_T1, 2) 
+  ) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable()
+```"

@@ -1,0 +1,2 @@
+"0","lg_data <-"
+"0","  bind_rows(lg_data_t1, lg_data_t3)"

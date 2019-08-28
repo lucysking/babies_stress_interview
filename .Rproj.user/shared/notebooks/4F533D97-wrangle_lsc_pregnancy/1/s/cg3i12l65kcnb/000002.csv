@@ -1,0 +1,70 @@
+"0","```r
+lscr_table_childhood_stressors <-
+  lscr_preg %>% 
+  select(
+    child_sev_vars
+  ) %>% 
+  gather(type, rating, sev_child_disas:sev_child_other2) %>% 
+  group_by(type) %>% 
+  count(endorsed = !is.na(rating)) %>% 
+  ungroup() %>% 
+  filter(endorsed) %>% 
+  mutate(
+    type = str_replace(type, \"sev_child_\", \"\")
+  ) %>% 
+  select(-endorsed)
+types_child_names <-
+  lscr_table_childhood_stressors %>% 
+  select(type) %>% 
+  mutate(type = as.factor(type)) %>% 
+  pull(type) %>% 
+  levels()
+lscr_table_childhood_stressors %>% 
+  mutate(
+    type = factor(
+      type,
+      levels = types_child_names,
+      labels = c(
+        \"accident (self)\",
+        \"adoption or foster care\",
+        \"caretaker for close other\",
+        \"sudden death of close other\",
+        \"expected death of close other\",
+        \"disaster\",
+        \"domestic violence (adulthood)\",
+        \"emotional abuse 1\",
+        \"emotional abuse 2\",
+        \"arrest/imprisonment of family\",
+        \"domestic violence (childhood)\",
+        \"serious physical illness (self)\",
+        \"financial problems\",
+        \"robbed/mugged/attacked (self)\",
+        \"other (anything additional)\",
+        \"other (happened to close other)\",
+        \"parental separation/divorce\",
+        \"physical abuse\",
+        \"physical neglect\",
+        \"rape (childhood)\",
+        \"rape (adulthood)\",
+        \"sexual harassment\",
+        \"other sexual assault (childhood)\",
+        \"other sexual assault (adulthood)\",
+        \"witnessed accident\",
+        \"witnessed robbery/mugging/attack\"
+      )
+    ),
+    type = fct_collapse(
+      type,
+      `emotional abuse/neglect` = c(\"emotional abuse 1\", \"emotional abuse 2\"),
+      `rape` = c(\"rape (childhood)\", \"rape (adulthood)\"),
+      `other sexual assault` = c(\"other sexual assault (childhood)\", \"other sexual assault (adulthood)\")
+    )
+  ) %>% 
+  group_by(type) %>% 
+  summarise(
+    n = sum(n),
+    `proportion endorsed` = round(n / N_T1, 2) 
+  ) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable()
+```"

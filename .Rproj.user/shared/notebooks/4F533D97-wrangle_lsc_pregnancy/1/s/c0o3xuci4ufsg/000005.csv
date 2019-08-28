@@ -1,0 +1,7 @@
+"0","```r
+lscr_preg %>% 
+  summarize_at(
+    vars(sum_sev_childhood),
+    funs(min, max, mean, median, sd)
+  )
+```"

@@ -1,0 +1,123 @@
+"0","```r
+calc_preg_sev <- function(preg_exp, sev) { #pregnancy
+  case_when(
+    preg_exp == 1 ~ sev,
+    TRUE ~ NA_real_
+  )
+}
+#save variable names in order to map later
+preg_exp_vars <- 
+  lscr_preg %>% 
+  select(contains(\"preg\")) %>% 
+  names()
+exp_vars <- 
+  lscr_preg %>% 
+  select(contains(\"preg\")) %>% 
+  names() %>% 
+  str_replace(\"_preg\", \"\") 
+sev_vars <- 
+  lscr_preg %>% 
+  select(contains(\"sev_con\")) %>% 
+  names()
+#add total scores: n lifetime, objective severity lifetime, n pregnancy
+lscr_preg <-
+  lscr_preg %>% 
+  mutate_at(
+    vars(exp_vars),
+    as.integer
+  ) %>% 
+  mutate_at(
+    vars(preg_exp_vars),
+    as.integer
+  ) %>% 
+  mutate(
+    num_stress_total = 
+      pmap_int(
+        select(., exp_vars),
+        function(...) sum(c(...), na.rm = TRUE)
+      ),
+    num_stress_preg = 
+      pmap_int(
+        select(., preg_exp_vars),
+        function(...) sum(c(...), na.rm = TRUE)
+      ), 
+    sum_sev = 
+      pmap_dbl(
+        select(., sev_vars),
+        function(...) sum(c(...), na.rm = TRUE)
+      ),
+    max_sev = 
+      pmap_dbl(
+        select(., sev_vars),
+        function(...) max(c(...), na.rm = TRUE)
+      ),
+    pregnancy_stress = 
+      if_else(
+        num_stress_preg > 0,
+        \"yes\", \"no\"
+      )
+  ) %>% 
+  mutate(
+    max_sev = if_else(
+      max_sev == -Inf,
+      0, max_sev
+    ),
+    ##objective severity ratings during pregnancy
+    sev_preg_disas = calc_preg_sev(lscr_disas_preg, sev_con_disas),
+    sev_preg_witacc = calc_preg_sev(lscr_witacc_preg, sev_con_witacc),
+    sev_preg_acc = calc_preg_sev(lscr_acc_preg, sev_con_acc),
+    sev_preg_famjail = calc_preg_sev(lscr_famjail_preg, sev_con_famjail),
+    sev_preg_jail = calc_preg_sev(lscr_jail_preg, sev_con_jail),
+    sev_preg_adopt = calc_preg_sev(lscr_adopt_preg, sev_con_adopt),
+    sev_preg_pardivorce = calc_preg_sev(lscr_pardivorce_preg, sev_con_pardivorce),
+    sev_preg_divorce = calc_preg_sev(lscr_divorce_preg, sev_con_divorce),
+    sev_preg_money = calc_preg_sev(lscr_money_preg, sev_con_money),
+    sev_preg_ill = calc_preg_sev(lscr_ill_preg, sev_con_ill),
+    sev_preg_emoab = calc_preg_sev(lscr_emoab_preg, sev_con_emoab),
+    sev_preg_emoab_2 = calc_preg_sev(lscr_emoab_preg_2, sev_con_emoab2),
+    sev_preg_physneg = calc_preg_sev(lscr_physneg_preg, sev_con_physneg),
+    sev_preg_abort = calc_preg_sev(lscr_abort_preg, sev_con_abort),
+    sev_preg_sepchild = calc_preg_sev(lscr_sepchild_preg, sev_con_sepchild),
+    sev_preg_care = calc_preg_sev(lscr_care_preg, sev_con_care),
+    sev_preg_death1 = calc_preg_sev(lscr_death1_preg, sev_con_death1),
+    sev_preg_death2 = calc_preg_sev(lscr_death2_preg, sev_con_death2),
+    sev_preg_famviol = calc_preg_sev(lscr_famviol_preg, sev_con_famviol),
+    sev_preg_witmug = calc_preg_sev(lscr_witmug_preg, sev_con_witmug),
+    sev_preg_mug = calc_preg_sev(lscr_mug_preg, sev_con_mug),
+    sev_preg_physab = calc_preg_sev(lscr_physab_preg, sev_con_physab),
+    sev_preg_domviol = calc_preg_sev(lscr_domviol_preg, sev_con_domviol),
+    sev_preg_sexharas = calc_preg_sev(lscr_sexharas_preg, sev_con_sexharas),
+    sev_preg_sextouch1 = calc_preg_sev(lscr_sextouch1_preg, sev_con_sextouch1),
+    sev_preg_sextouch2 = calc_preg_sev(lscr_sextouch2_preg, sev_con_sextouch2),
+    sev_preg_rape1 = calc_preg_sev(lscr_rape1_preg, sev_con_rape1),
+    sev_preg_rape2 = calc_preg_sev(lscr_rape2_preg, sev_con_rape2),
+    sev_preg_other1 = calc_preg_sev(lscr_other1_preg, sev_con_other1),
+    sev_preg_other2 = calc_preg_sev(lscr_other2_preg, sev_con_other2)
+  ) 
+#save variable names to map over 
+preg_sev_vars <- 
+  lscr_preg %>% 
+  select(starts_with(\"sev_preg\")) %>% 
+  names()
+#calculate pregnancy objective severity
+lscr_preg <-
+  lscr_preg %>% 
+  mutate(
+    sum_sev_preg = 
+      pmap_dbl(
+        select(., preg_sev_vars),
+        function(...) sum(c(...), na.rm = TRUE)
+      ),
+    max_sev_preg = 
+      pmap_dbl(
+        select(., preg_sev_vars),
+        function(...) max(c(...), na.rm = TRUE)
+      ),
+    max_sev_preg = if_else(
+      max_sev_preg == -Inf,
+      0, max_sev_preg
+    )
+  )
+```"
+"1","no non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Infno non-missing arguments to max; returning -Inf
+"

@@ -1,0 +1,6 @@
+"0","```r
+lscr_preg %>% 
+  ggplot(aes(max_sev_childhood)) +
+  geom_histogram(bins = 15) +
+  labs(x = \"Max childhood stress severity\")
+```"

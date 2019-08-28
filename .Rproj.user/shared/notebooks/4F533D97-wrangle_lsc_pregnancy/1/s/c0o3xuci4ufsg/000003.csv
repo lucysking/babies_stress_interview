@@ -1,0 +1,5 @@
+"0","```r
+lscr_preg %>% 
+  count(pregnancy_stress) %>% 
+  mutate(per = n / sum(n))
+```"

@@ -1,0 +1,16 @@
+"0","```r
+#Libraries
+library(tidyverse)
+library(psych)
+```"
+"1","
+Attaching package: ‘psych’
+
+The following objects are masked from ‘package:ggplot2’:
+
+    %+%, alpha
+"
+"0","```r
+#Parameters
+stress_ratings_long_file <- \"~/Desktop/BABIES/r01_winter_2019/data/long_preg_LSCR_2018-10-01_rated.xlsx\"
+```"

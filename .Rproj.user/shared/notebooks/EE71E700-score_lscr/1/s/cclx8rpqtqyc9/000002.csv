@@ -1,0 +1,62 @@
+"0","cs_data1 <-"
+"0","  read_xlsx(cs_stress_file1) %>% "
+"0","  mutate("
+"0","    timepoint = ""CX 6mo"""
+"0","  ) %>% "
+"0","  select("
+"0","    -redcap_event_name:-lscr_file,"
+"0","    -lscr_interviewer,"
+"0","    -contains(""date"")"
+"0","  )"
+"1",""
+"1","-"
+"1",""
+"1","/"
+"1","                                                                                                                    "
+"1",""
+"0","cs_data2 <-"
+"0","  read_xlsx(cs_stress_file2) %>% "
+"0","  mutate("
+"0","    timepoint = ""CX 6mo"""
+"0","  ) %>% "
+"0","  select("
+"0","    -redcap_event_name:-lscr_file,"
+"0","    -lscr_interviewer,"
+"0","    -contains(""date"")"
+"0","  )"
+"1",""
+"1","-"
+"1",""
+"1","/"
+"1","                                                                                                                    "
+"1",""
+"0","cs_data <- "
+"0","  bind_rows(cs_data1, cs_data2) %>% "
+"0","  left_join("
+"0","    read_csv(cs_dob_file),"
+"0","    by = ""record_id"""
+"0","  ) %>% "
+"0","  left_join("
+"0","    read_csv(cs_visit_date_file) %>% "
+"0","      mutate(record_id = as.numeric(record_id)),"
+"0","    by = ""record_id"""
+"0","  ) %>% "
+"0","  rename("
+"0","    ID = record_id"
+"0","  )"
+"2","Parsed with column specification:
+cols(
+  record_id = [32mcol_double()[39m,
+  date_phonescr = [31mcol_character()[39m,
+  mom_dob = [31mcol_character()[39m,
+  baby_dob = [31mcol_character()[39m,
+  baby_due_date = [31mcol_character()[39m
+)
+"
+"2","Parsed with column specification:
+cols(
+  record_id = [31mcol_character()[39m,
+  visit_date = [31mcol_character()[39m
+)
+"
+"2","NAs introduced by coercion"

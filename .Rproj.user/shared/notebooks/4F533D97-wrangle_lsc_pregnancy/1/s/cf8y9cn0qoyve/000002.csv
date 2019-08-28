@@ -1,0 +1,73 @@
+"0","```r
+N_T1 <- n_distinct(lscr_preg$ID)
+lscr_table <-
+  lscr_preg %>% 
+  select(
+    sev_vars
+  ) %>% 
+  gather(type, rating, sev_con_disas:sev_con_other2) %>% 
+  group_by(type) %>% 
+  count(endorsed = !is.na(rating)) %>% 
+  ungroup() %>% 
+  filter(endorsed) %>% 
+  mutate(
+    type = str_replace(type, \"sev_con_\", \"\")
+  ) %>% 
+  select(-endorsed)
+types_names <-
+  lscr_table %>% 
+  select(type) %>% 
+  mutate(type = as.factor(type)) %>% 
+  pull(type) %>% 
+  levels()
+lscr_table %>% 
+  mutate(
+    type = factor(
+      type,
+      levels = types_names,
+      labels = c(
+        \"abortion or miscarriage\",
+        \"accident (self)\",
+        \"adoption or foster care\",
+        \"cartaker for close other\",
+        \"sudden death of close other\",
+        \"expected death of close other\",
+        \"disaster\",
+        \"divorce (self)\",
+        \"domestic violence (adulthood)\",
+        \"emotional abuse 1\",
+        \"emotional abuse 2\",
+        \"arrest/imprisonment of family\",
+        \"domestic violence (childhood)\",
+        \"serious physical illness (self)\",
+        \"arrest/imprisonment (self)\",
+        \"financial problems\",
+        \"robbed/mugged/attacked (self)\",
+        \"other (anything additional)\",
+        \"other (happened to close other)\",
+        \"parental separation/divorce\",
+        \"physical abuse\",
+        \"physical neglect\",
+        \"rape (childhood)\",
+        \"rape (adulthood)\",
+        \"separated from child\",
+        \"sexual harassment\",
+        \"other sexual assault (childhood)\",
+        \"other sexual assault (adulthood)\",
+        \"witnessed accident\",
+        \"witnessed robbery/mugging/attack\"
+      )
+    ),
+    type = fct_collapse(
+      type,
+      `emotional abuse/neglect` = c(\"emotional abuse 1\", \"emotional abuse 2\")
+    )
+  ) %>% 
+  group_by(type) %>% 
+  summarise(
+    n = sum(n),
+    `proportion endorsed` = round(n / N_T1, 2) 
+  ) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable()
+```"

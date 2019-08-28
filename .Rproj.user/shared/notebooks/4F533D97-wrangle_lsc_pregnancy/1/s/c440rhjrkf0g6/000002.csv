@@ -1,0 +1,23 @@
+"0","```r
+winsorize <- function(df, value) {
+  value <- enquo(value)
+  df %>%
+    mutate(
+      value = case_when(
+        !!value > (mean(!!value, na.rm = TRUE) + (3 * sd(!!value, na.rm = TRUE))) ~
+        mean(!!value, na.rm = TRUE) + (3 * sd(!!value, na.rm = TRUE)),
+        !!value < (mean(!!value, na.rm = TRUE) - (3 * sd(!!value, na.rm = TRUE))) ~
+        mean(!!value, na.rm = TRUE) - (3 * sd(!!value, na.rm = TRUE)),
+        TRUE ~ !!value
+      )
+    )
+}
+lscr_preg <-
+  lscr_preg %>% 
+  winsorize(sum_sev_childhood) %>% 
+  rename(sum_sev_childhood_win = value)
+lscr_preg %>% 
+  ggplot(aes(sum_sev_childhood_win)) +
+  geom_histogram(bins = 15) +
+  labs(x = \"Childhood stress severity (winsorized\")
+```"

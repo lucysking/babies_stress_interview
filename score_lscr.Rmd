@@ -1,0 +1,1199 @@
+---
+title: "Score BABIES Life Stress Checklist - Revised"
+output: html_notebook
+---
+
+# Environment
+```{r}
+library(tidyverse)
+library(lubridate)
+library(psych)
+library(readxl)
+
+
+# cross-sectional data
+cs_stress_file1 <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201811_6mo_rated_cleaned.xlsx"
+cs_stress_file2 <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201904_6mo_rated_cleaned.xlsx"
+cs_dob_file <- "~/Desktop/BABIES/stress_interview/data/demo_data/cs_dob.csv"
+cs_visit_date_file <- "~/Desktop/BABIES/stress_interview/data/demo_data/cs_visit_date.csv"
+
+# longitudinal data
+lg_stress_T1_file <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_201906_preg_rated_cleaned.xlsx"
+lg_stress_T3_file <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_201907_6mo_rated_cleaned.xlsx"
+
+```
+
+
+# Score Cross-Sectional LSC-R Data 
+### (collected at infant age 6 months)
+
+## Read in data
+
+```{r}
+cs_data1 <-
+  read_xlsx(cs_stress_file1) %>% 
+  mutate(
+    timepoint = "CX 6mo"
+  ) %>% 
+  select(
+    -redcap_event_name:-lscr_file,
+    -lscr_interviewer,
+    -contains("date")
+  )
+
+cs_data2 <-
+  read_xlsx(cs_stress_file2) %>% 
+  mutate(
+    timepoint = "CX 6mo"
+  ) %>% 
+  select(
+    -redcap_event_name:-lscr_file,
+    -lscr_interviewer,
+    -contains("date")
+  )
+
+cs_data <- 
+  bind_rows(cs_data1, cs_data2) %>% 
+  left_join(
+    read_csv(cs_dob_file),
+    by = "record_id"
+  ) %>% 
+  left_join(
+    read_csv(cs_visit_date_file) %>% 
+      mutate(record_id = as.numeric(record_id)),
+    by = "record_id"
+  ) %>% 
+  rename(
+    ID = record_id
+  )
+```
+
+
+## Lifetime stress: Cross-sectional data 
+
+```{r}
+exp_vars <- 
+  cs_data %>% 
+  select(contains("preg")) %>% 
+  names() %>% 
+  str_replace("_preg", "") 
+
+sev_vars <- 
+  cs_data %>% 
+  select(contains("sev_con")) %>% 
+  names()
+
+sub_sev_vars <-
+  cs_data %>% 
+  select(contains("_sev")) %>% 
+  names()
+
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate_at(
+    vars(exp_vars),
+    as.integer
+  ) %>% 
+  mutate_at(
+    vars(sev_vars),
+    as.double
+  ) %>% 
+  mutate_at(
+    vars(sub_sev_vars),
+    as.double
+  ) %>% 
+  mutate(
+    num_types = pmap_int(
+      select(., exp_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    sum_sev = pmap_dbl(
+      select(., sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sev = pmap_dbl(
+      select(., sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    sum_sub_sev = pmap_dbl(
+      select(., sub_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev = pmap_dbl(
+      select(., sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    )
+  ) %>% 
+  mutate(
+   max_sev = if_else(
+      max_sev == -Inf,
+      0, max_sev
+    ),
+   max_sub_sev = if_else(
+      max_sub_sev == -Inf,
+      0, max_sub_sev
+    )
+  )
+```
+
+
+## Pregnancy stress: Cross-sectional data 
+
+```{r}
+preg_exp_vars <- 
+  cs_data %>% 
+  select(contains("preg")) %>% 
+  names()
+
+calc_stage_sev <- function(stage_exp, sev) { #pregnancy
+  case_when(
+    stage_exp == 1 ~ sev,
+    stage_exp == 0 ~ NA_real_,
+    is.na(stage_exp) ~ NA_real_
+  )
+}
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate_at(
+    vars(preg_exp_vars),
+    as.integer
+  ) %>% 
+  mutate(
+    #objective
+    sev_preg_disas = calc_stage_sev(lscr_disas_preg, sev_con_disas),
+    sev_preg_witacc = calc_stage_sev(lscr_witacc_preg, sev_con_witacc),
+    sev_preg_acc = calc_stage_sev(lscr_acc_preg, sev_con_acc),
+    sev_preg_famjail = calc_stage_sev(lscr_famjail_preg, sev_con_famjail),
+    sev_preg_jail = calc_stage_sev(lscr_jail_preg, sev_con_jail),
+    sev_preg_adopt = calc_stage_sev(lscr_adopt_preg, sev_con_adopt),
+    sev_preg_pardivorce = calc_stage_sev(lscr_pardivorce_preg, sev_con_pardivorce),
+    sev_preg_divorce = calc_stage_sev(lscr_divorce_preg, sev_con_divorce),
+    sev_preg_money = calc_stage_sev(lscr_money_preg, sev_con_money),
+    sev_preg_ill = calc_stage_sev(lscr_ill_preg, sev_con_ill),
+    sev_preg_emoab = calc_stage_sev(lscr_emoab_preg, sev_con_emoab),
+    sev_preg_physneg = calc_stage_sev(lscr_physneg_preg, sev_con_physneg),
+    sev_preg_abort = calc_stage_sev(lscr_abort_preg, sev_con_abort),
+    sev_preg_sepchild = calc_stage_sev(lscr_sepchild_preg, sev_con_sepchild),
+    sev_preg_care = calc_stage_sev(lscr_care_preg, sev_con_care),
+    sev_preg_death1 = calc_stage_sev(lscr_death1_preg, sev_con_death1),
+    sev_preg_death2 = calc_stage_sev(lscr_death2_preg, sev_con_death2),
+    sev_preg_famviol = calc_stage_sev(lscr_famviol_preg, sev_con_famviol),
+    sev_preg_witmug = calc_stage_sev(lscr_witmug_preg, sev_con_witmug),
+    sev_preg_mug = calc_stage_sev(lscr_mug_preg, sev_con_mug),
+    sev_preg_physab = calc_stage_sev(lscr_physab_preg, sev_con_physab),
+    sev_preg_domviol = calc_stage_sev(lscr_domviol_preg, sev_con_domviol),
+    sev_preg_sexharas = calc_stage_sev(lscr_sexharas_preg, sev_con_sexharas),
+    sev_preg_sextouch1 = calc_stage_sev(lscr_sextouch1_preg, sev_con_sextouch1),
+    sev_preg_sextouch2 = calc_stage_sev(lscr_sextouch2_preg, sev_con_sextouch2),
+    sev_preg_rape1 = calc_stage_sev(lscr_rape1_preg, sev_con_rape1),
+    sev_preg_rape2 = calc_stage_sev(lscr_rape2_preg, sev_con_rape2),
+    sev_preg_other1 = calc_stage_sev(lscr_other1_preg, sev_con_other1),
+    sev_preg_other2 = calc_stage_sev(lscr_other2_preg, sev_con_other2),
+    sev_preg_other3 = calc_stage_sev(lscr_other2_preg, sev_con_other3)
+)
+
+cs_data <-
+  cs_data %>% 
+  mutate(
+    #subjective
+    sub_sev_preg_disas = calc_stage_sev(lscr_disas_preg, lscr_disas_sev),
+    sub_sev_preg_witacc = calc_stage_sev(lscr_witacc_preg, lscr_witacc_sev),
+    sub_sev_preg_acc = calc_stage_sev(lscr_acc_preg, lscr_acc_sev),
+    sub_sev_preg_famjail = calc_stage_sev(lscr_famjail_preg, lscr_famjail_sev),
+    sub_sev_preg_jail = calc_stage_sev(lscr_jail_preg, lscr_jail_sev),
+    sub_sev_preg_adopt = calc_stage_sev(lscr_adopt_preg, lscr_adopt_sev),
+    sub_sev_preg_pardivorce = calc_stage_sev(lscr_pardivorce_preg, lscr_pardivorce_sev),
+    sub_sev_preg_divorce = calc_stage_sev(lscr_divorce_preg, lscr_divorce_sev),
+    sub_sev_preg_money = calc_stage_sev(lscr_money_preg, lscr_money_sev),
+    sub_sev_preg_ill = calc_stage_sev(lscr_ill_preg, lscr_ill_sev),
+    sub_sev_preg_emoab = calc_stage_sev(lscr_emoab_preg, lscr_emoab_sev),
+    sub_sev_preg_physneg = calc_stage_sev(lscr_physneg_preg, lscr_physneg_sev),
+    sub_sev_preg_abort = calc_stage_sev(lscr_abort_preg, lscr_abort_sev),
+    sub_sev_preg_sepchild = calc_stage_sev(lscr_sepchild_preg, lscr_sepchild_sev),
+    sub_sev_preg_care = calc_stage_sev(lscr_care_preg, lscr_care_sev),
+    sub_sev_preg_death1 = calc_stage_sev(lscr_death1_preg, lscr_death1_sev),
+    sub_sev_preg_death2 = calc_stage_sev(lscr_death2_preg, lscr_death2_sev),
+    sub_sev_preg_famviol = calc_stage_sev(lscr_famviol_preg, lscr_famviol_sev),
+    sub_sev_preg_witmug = calc_stage_sev(lscr_witmug_preg, lscr_witmug_sev),
+    sub_sev_preg_mug = calc_stage_sev(lscr_mug_preg, lscr_mug_sev),
+    sub_sev_preg_physab = calc_stage_sev(lscr_physab_preg, lscr_physab_sev),
+    sub_sev_preg_domviol = calc_stage_sev(lscr_domviol_preg, lscr_domviol_sev),
+    sub_sev_preg_sexharas = calc_stage_sev(lscr_sexharas_preg, lscr_sexharas_sev),
+    sub_sev_preg_sextouch1 = calc_stage_sev(lscr_sextouch1_preg, lscr_sextouch1_sev),
+    sub_sev_preg_sextouch2 = calc_stage_sev(lscr_sextouch2_preg, lscr_sextouch2_sev),
+    sub_sev_preg_rape1 = calc_stage_sev(lscr_rape1_preg, lscr_rape1_sev),
+    sub_sev_preg_rape2 = calc_stage_sev(lscr_rape2_preg, lscr_rape2_sev),
+    sub_sev_preg_other1 = calc_stage_sev(lscr_other1_preg, lscr_other1_sev),
+    sub_sev_preg_other2 = calc_stage_sev(lscr_other2_preg, lscr_other2_sev),
+    sub_sev_preg_other3 = calc_stage_sev(lscr_other3_preg, lscr_other3_sev)
+  ) 
+
+```
+
+```{r}
+preg_sev_vars <-
+  cs_data %>% 
+  select(contains("sev_preg")) %>% 
+  names() %>% 
+  str_replace("sub_", "") 
+
+preg_sub_sev_vars <-
+  cs_data %>% 
+  select(contains("sub_sev_preg")) %>% 
+  names() 
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate(
+    num_types_preg = pmap_int(
+      select(., preg_exp_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    sum_sev_preg = pmap_dbl(
+      select(., preg_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sev_preg =  pmap_dbl(
+      select(., preg_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    sum_sub_sev_preg = pmap_dbl(
+      select(., preg_sub_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev_preg =  pmap_dbl(
+      select(., preg_sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    max_sev_preg = if_else(
+      max_sev_preg == -Inf,
+      0, max_sev_preg
+    ),
+    max_sub_sev_preg = if_else(
+      max_sev_preg == -Inf,
+      0, max_sev_preg
+    )
+  )
+```
+
+# Postnatal stress
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate_at(
+    vars(mom_dob, baby_dob, baby_due_date, visit_date),
+    list(~parse_date_time2(., "mdy"))
+  ) %>% 
+  mutate(
+    mom_age_lsc6mo = (mom_dob %--% visit_date) / years(1),
+    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
+    conception_date = baby_due_date - weeks(38),
+    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
+  )
+```
+
+```{r}
+postnatal_exp <- function(data, age, exp, age_exp, preg_exp) {
+  age <- enquo(age)
+  exp <- enquo(exp)
+  age_exp <- enquo(age_exp)
+  preg_exp <- enquo(preg_exp)
+  var_name <- paste0(quo_name(exp), "_post")
+  
+                     
+  data %>% 
+    mutate(
+      !! var_name :=
+        if_else(
+          !!age_exp >= !!age & (!!preg_exp == 0 | is.na(!!preg_exp)),
+          1, 0
+        )
+    )
+}
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  postnatal_exp(mom_age_birth, lscr_disas, lscr_disas_age_off, lscr_disas_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_acc, lscr_acc_age_off, lscr_acc_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_witacc, lscr_witacc_age_off, lscr_witacc_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_famjail, lscr_famjail_age_off, lscr_famjail_preg) %>%
+  postnatal_exp(mom_age_birth, lscr_jail, lscr_jail_age_off, lscr_jail_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_adopt, lscr_adopt_age_off, lscr_adopt_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_pardivorce, lscr_pardivorce_age_off, lscr_pardivorce_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_divorce, lscr_divorce_age_off, lscr_divorce_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_money, lscr_money_age_off, lscr_money_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_ill, lscr_ill_age_off, lscr_ill_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_emoab, lscr_emoab_age_off, lscr_emoab_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_physneg, lscr_physneg_age_off, lscr_physneg_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_abort, lscr_abort_age_off, lscr_abort_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_sepchild, lscr_sepchild_age_off, lscr_sepchild_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_care, lscr_care_age_off, lscr_care_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_death1, lscr_death1_age_off, lscr_death1_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_death2, lscr_death2_age_off, lscr_death2_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_famviol, lscr_famviol_age_off, lscr_famviol_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_witmug, lscr_witmug_age_off, lscr_witmug_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_mug, lscr_mug_age_off, lscr_mug_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_physab, lscr_physab_age_off, lscr_physab_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_domviol, lscr_domviol_age_off, lscr_domviol_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_sexharas, lscr_sexharas_age_off, lscr_sexharas_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_sextouch1, lscr_sextouch1_age_off, lscr_sextouch1_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_sextouch2, lscr_sextouch2_age_off, lscr_sextouch2_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_rape1, lscr_rape1_age_off, lscr_rape1_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_rape2, lscr_rape2_age_off, lscr_rape2_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_other1, lscr_other1_age_off, lscr_other1_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_other2, lscr_other2_age_off, lscr_other2_preg) %>% 
+  postnatal_exp(mom_age_birth, lscr_other3, lscr_other3_age_off, lscr_other3_preg)
+```
+
+```{r}
+post_exp_vars <-
+  cs_data %>% 
+  select(contains("post")) %>% 
+  names()
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate_at(
+    vars(post_exp_vars),
+    as.integer
+  ) %>% 
+  mutate(
+    #objective
+    sev_post_disas = calc_stage_sev(lscr_disas_post, sev_con_disas),
+    sev_post_witacc = calc_stage_sev(lscr_witacc_post, sev_con_witacc),
+    sev_post_acc = calc_stage_sev(lscr_acc_post, sev_con_acc),
+    sev_post_famjail = calc_stage_sev(lscr_famjail_post, sev_con_famjail),
+    sev_post_jail = calc_stage_sev(lscr_jail_post, sev_con_jail),
+    sev_post_adopt = calc_stage_sev(lscr_adopt_post, sev_con_adopt),
+    sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_post, sev_con_pardivorce),
+    sev_post_divorce = calc_stage_sev(lscr_divorce_post, sev_con_divorce),
+    sev_post_money = calc_stage_sev(lscr_money_post, sev_con_money),
+    sev_post_ill = calc_stage_sev(lscr_ill_post, sev_con_ill),
+    sev_post_emoab = calc_stage_sev(lscr_emoab_post, sev_con_emoab),
+    sev_post_physneg = calc_stage_sev(lscr_physneg_post, sev_con_physneg),
+    sev_post_abort = calc_stage_sev(lscr_abort_post, sev_con_abort),
+    sev_post_sepchild = calc_stage_sev(lscr_sepchild_post, sev_con_sepchild),
+    sev_post_care = calc_stage_sev(lscr_care_post, sev_con_care),
+    sev_post_death1 = calc_stage_sev(lscr_death1_post, sev_con_death1),
+    sev_post_death2 = calc_stage_sev(lscr_death2_post, sev_con_death2),
+    sev_post_famviol = calc_stage_sev(lscr_famviol_post, sev_con_famviol),
+    sev_post_witmug = calc_stage_sev(lscr_witmug_post, sev_con_witmug),
+    sev_post_mug = calc_stage_sev(lscr_mug_post, sev_con_mug),
+    sev_post_physab = calc_stage_sev(lscr_physab_post, sev_con_physab),
+    sev_post_domviol = calc_stage_sev(lscr_domviol_post, sev_con_domviol),
+    sev_post_sexharas = calc_stage_sev(lscr_sexharas_post, sev_con_sexharas),
+    sev_post_sextouch1 = calc_stage_sev(lscr_sextouch1_post, sev_con_sextouch1),
+    sev_post_sextouch2 = calc_stage_sev(lscr_sextouch2_post, sev_con_sextouch2),
+    sev_post_rape1 = calc_stage_sev(lscr_rape1_post, sev_con_rape1),
+    sev_post_rape2 = calc_stage_sev(lscr_rape2_post, sev_con_rape2),
+    sev_post_other1 = calc_stage_sev(lscr_other1_post, sev_con_other1),
+    sev_post_other2 = calc_stage_sev(lscr_other2_post, sev_con_other2),
+    sev_post_other3 = calc_stage_sev(lscr_other2_post, sev_con_other3)
+  )
+
+cs_data <-
+  cs_data %>% 
+  mutate(
+    #subjective
+    sub_sev_post_disas = calc_stage_sev(lscr_disas_post, lscr_disas_sev),
+    sub_sev_post_witacc = calc_stage_sev(lscr_witacc_post, lscr_witacc_sev),
+    sub_sev_post_acc = calc_stage_sev(lscr_acc_post, lscr_acc_sev),
+    sub_sev_post_famjail = calc_stage_sev(lscr_famjail_post, lscr_famjail_sev),
+    sub_sev_post_jail = calc_stage_sev(lscr_jail_post, lscr_jail_sev),
+    sub_sev_post_adopt = calc_stage_sev(lscr_adopt_post, lscr_adopt_sev),
+    sub_sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_post, lscr_pardivorce_sev),
+    sub_sev_post_divorce = calc_stage_sev(lscr_divorce_post, lscr_divorce_sev),
+    sub_sev_post_money = calc_stage_sev(lscr_money_post, lscr_money_sev),
+    sub_sev_post_ill = calc_stage_sev(lscr_ill_post, lscr_ill_sev),
+    sub_sev_post_emoab = calc_stage_sev(lscr_emoab_post, lscr_emoab_sev),
+    sub_sev_post_physneg = calc_stage_sev(lscr_physneg_post, lscr_physneg_sev),
+    sub_sev_post_abort = calc_stage_sev(lscr_abort_post, lscr_abort_sev),
+    #sub_sev_post_sepchild = calc_stage_sev(lscr_sepchild_post, lscr_sepchild_sev),
+    sub_sev_post_care = calc_stage_sev(lscr_care_post, lscr_care_sev),
+    sub_sev_post_death1 = calc_stage_sev(lscr_death1_post, lscr_death1_sev),
+    sub_sev_post_death2 = calc_stage_sev(lscr_death2_post, lscr_death2_sev),
+    sub_sev_post_famviol = calc_stage_sev(lscr_famviol_post, lscr_famviol_sev),
+    sub_sev_post_witmug = calc_stage_sev(lscr_witmug_post, lscr_witmug_sev),
+    sub_sev_post_mug = calc_stage_sev(lscr_mug_post, lscr_mug_sev),
+    sub_sev_post_physab = calc_stage_sev(lscr_physab_post, lscr_physab_sev),
+    sub_sev_post_domviol = calc_stage_sev(lscr_domviol_post, lscr_domviol_sev),
+    sub_sev_post_sexharas = calc_stage_sev(lscr_sexharas_post, lscr_sexharas_sev),
+    sub_sev_post_sextouch1 = calc_stage_sev(lscr_sextouch1_post, lscr_sextouch1_sev),
+    sub_sev_post_sextouch2 = calc_stage_sev(lscr_sextouch2_post, lscr_sextouch2_sev),
+    sub_sev_post_rape1 = calc_stage_sev(lscr_rape1_post, lscr_rape1_sev),
+    sub_sev_post_rape2 = calc_stage_sev(lscr_rape2_post, lscr_rape2_sev),
+    sub_sev_post_other1 = calc_stage_sev(lscr_other1_post, lscr_other1_sev),
+    sub_sev_post_other2 = calc_stage_sev(lscr_other2_post, lscr_other2_sev),
+    sub_sev_post_other3 = calc_stage_sev(lscr_other3_post, lscr_other3_sev)
+  ) 
+```
+
+```{r}
+post_sev_vars <-
+  cs_data %>% 
+  select(contains("sev_post")) %>% 
+  names() %>% 
+  str_replace("sub_", "") 
+
+post_sub_sev_vars <-
+  cs_data %>% 
+  select(contains("sub_sev_post")) %>% 
+  names() 
+```
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate(
+    num_types_post = pmap_int(
+      select(., post_exp_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    sum_sev_post = pmap_dbl(
+      select(., post_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sev_post =  pmap_dbl(
+      select(., post_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    sum_sub_sev_post = pmap_dbl(
+      select(., post_sub_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev_post =  pmap_dbl(
+      select(., post_sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    max_sev_post = if_else(
+      max_sev_post == -Inf,
+      0, max_sev_post
+    ),
+    max_sub_sev_post = if_else(
+      max_sev_post == -Inf,
+      0, max_sev_post
+    )
+  )
+  
+```
+
+# Score Longitudina LSC-R Data 
+### (collected during pregnancy and at infant age 6 months)
+
+## Read in data
+
+### Data collected in pregnancy
+```{r}
+lg_data_t1 <-
+  read_xlsx(lg_stress_T1_file) %>% 
+  mutate(
+    timepoint = "LG_T1"
+  ) %>% 
+  select(
+    -redcap_event_name:-lscr_file,
+    -lscr_interviewer,
+    -contains("date")
+  ) %>% 
+  rename(
+    ID = record_id
+  ) %>% 
+  mutate(
+    ID = as.double(ID)
+  )
+```
+
+### Data collected at 6 months
+```{r}
+lg_data_t3 <-
+  read_xlsx(lg_stress_T3_file) %>% 
+  mutate(
+    timepoint = "LG_T3"
+  ) %>% 
+  select(
+    -redcap_event_name:-lscr_interviewer,
+    -contains("date")
+  ) %>% 
+  rename(
+    ID = record_id
+  )
+```
+
+```{r}
+lg_data <-
+  bind_rows(lg_data_t1, lg_data_t3)
+```
+
+## Lifetime stress: Longitudinal data 
+
+```{r}
+lg_data_wf <- 
+  lg_data %>% 
+  select(
+    ID,
+    timepoint,
+    contains("sev")
+  ) %>% 
+  gather(variable, value, lscr_disas_sev:sev_ls_pardivorce) %>% 
+  unite(new, timepoint, variable) %>% 
+  spread(new, value)
+```
+        
+        
+```{r}
+sev_vars <- 
+  lg_data_wf %>% 
+  select(contains("sev_con")) %>% 
+  names()
+
+sub_sev_vars <-
+  lg_data_wf %>% 
+  select(
+    contains("_sev"),
+    -contains("_con"),
+    -contains("_ls_"),
+    -contains("_lk"),
+    -contains("_kh")
+  ) %>% 
+  names()
+```
+
+```{r}
+lg_data_wf <-
+  lg_data_wf %>% 
+  mutate_at(
+    vars(sev_vars),
+    as.double
+  ) %>% 
+  mutate_at(
+    vars(sub_sev_vars),
+    as.double
+  ) %>% 
+  mutate(
+    max_sev = pmap_dbl(
+      select(., sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev = pmap_dbl(
+      select(., sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    )
+  ) %>% 
+  mutate(
+    max_sev = if_else(
+      max_sev == -Inf,
+      0, max_sev
+    ),
+    max_sub_sev = if_else(
+      max_sub_sev == -Inf,
+      0, max_sub_sev
+    )
+  )
+```
+
+```{r}
+lg_data_num_types <- 
+  lg_data %>% 
+  gather(
+    event, 
+    endorsed, 
+    lscr_disas,
+    lscr_witacc,
+    lscr_acc,
+    lscr_famjail,
+    lscr_jail,
+    lscr_adopt,
+    lscr_pardivorce,
+    lscr_divorce,
+    lscr_money,
+    lscr_ill,
+    lscr_emoab,
+    lscr_emoab_2,
+    lscr_physneg,
+    lscr_abort,
+    lscr_sepchild,
+    lscr_care,
+    lscr_death1,
+    lscr_death2,
+    lscr_famviol,
+    lscr_witmug,
+    lscr_mug,
+    lscr_physab,
+    lscr_domviol,
+    lscr_sexharas,
+    lscr_sextouch1,
+    lscr_sextouch2,
+    lscr_rape1,
+    lscr_rape2,
+    lscr_other1,
+    lscr_other2
+  ) %>% 
+  select(ID, event, endorsed) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    endorsed = max(endorsed, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    endorsed = if_else(
+      endorsed == -Inf,
+      0, endorsed
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    num_types = sum(endorsed)
+  )
+
+```
+
+```{r}
+lg_data_sum_sev <- 
+  lg_data %>% 
+  gather(
+    event, 
+    rating, 
+    contains("sev_con")
+  ) %>% 
+  select(ID, event, rating) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    rating = max(rating, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    rating = if_else(
+      rating == -Inf,
+      0, rating
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    sum_sev = sum(rating)
+  )
+```
+
+```{r}
+lg_data_sum_sub_sev <- 
+  lg_data %>% 
+  gather(
+    event, 
+    rating, 
+    contains("_sev"),
+    -contains("_con"),
+    -contains("_ls_"),
+    -contains("_lk"),
+    -contains("_kh")
+  ) %>% 
+  select(ID, event, rating) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    rating = max(rating, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    rating = if_else(
+      rating == -Inf,
+      0, rating
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    sum_sub_sev = sum(rating)
+  )
+```
+
+```{r}
+lg_data_lifetime <-
+  lg_data_wf %>% 
+  select(ID, max_sev, max_sub_sev) %>% 
+  left_join(lg_data_num_types, by = "ID") %>% 
+  left_join(lg_data_sum_sev, by = "ID") %>% 
+  left_join(lg_data_sum_sub_sev, by = "ID")
+```
+
+## Pregnancy stress: Longitudinal data 
+
+```{r}
+preg_exp_vars <- 
+  lg_data %>% 
+  select(contains("preg")) %>% 
+  names()
+```
+
+```{r}
+lg_data_preg <-
+  lg_data %>% 
+  mutate_at(
+    vars(preg_exp_vars),
+    as.integer
+  ) %>% 
+  mutate(
+    #objective
+    sev_preg_disas = calc_stage_sev(lscr_disas_preg, sev_con_disas),
+    sev_preg_witacc = calc_stage_sev(lscr_witacc_preg, sev_con_witacc),
+    sev_preg_acc = calc_stage_sev(lscr_acc_preg, sev_con_acc),
+    sev_preg_famjail = calc_stage_sev(lscr_famjail_preg, sev_con_famjail),
+    sev_preg_jail = calc_stage_sev(lscr_jail_preg, sev_con_jail),
+    sev_preg_adopt = calc_stage_sev(lscr_adopt_preg, sev_con_adopt),
+    sev_preg_pardivorce = calc_stage_sev(lscr_pardivorce_preg, sev_con_pardivorce),
+    sev_preg_divorce = calc_stage_sev(lscr_divorce_preg, sev_con_divorce),
+    sev_preg_money = calc_stage_sev(lscr_money_preg, sev_con_money),
+    sev_preg_ill = calc_stage_sev(lscr_ill_preg, sev_con_ill),
+    sev_preg_emoab = calc_stage_sev(lscr_emoab_preg, sev_con_emoab),
+    sev_preg_physneg = calc_stage_sev(lscr_physneg_preg, sev_con_physneg),
+    sev_preg_abort = calc_stage_sev(lscr_abort_preg, sev_con_abort),
+    sev_preg_sepchild = calc_stage_sev(lscr_sepchild_preg, sev_con_sepchild),
+    sev_preg_care = calc_stage_sev(lscr_care_preg, sev_con_care),
+    sev_preg_death1 = calc_stage_sev(lscr_death1_preg, sev_con_death1),
+    sev_preg_death2 = calc_stage_sev(lscr_death2_preg, sev_con_death2),
+    sev_preg_famviol = calc_stage_sev(lscr_famviol_preg, sev_con_famviol),
+    sev_preg_witmug = calc_stage_sev(lscr_witmug_preg, sev_con_witmug),
+    sev_preg_mug = calc_stage_sev(lscr_mug_preg, sev_con_mug),
+    sev_preg_physab = calc_stage_sev(lscr_physab_preg, sev_con_physab),
+    sev_preg_domviol = calc_stage_sev(lscr_domviol_preg, sev_con_domviol),
+    sev_preg_sexharas = calc_stage_sev(lscr_sexharas_preg, sev_con_sexharas),
+    sev_preg_sextouch1 = calc_stage_sev(lscr_sextouch1_preg, sev_con_sextouch1),
+    sev_preg_sextouch2 = calc_stage_sev(lscr_sextouch2_preg, sev_con_sextouch2),
+    sev_preg_rape1 = calc_stage_sev(lscr_rape1_preg, sev_con_rape1),
+    sev_preg_rape2 = calc_stage_sev(lscr_rape2_preg, sev_con_rape2),
+    sev_preg_other1 = calc_stage_sev(lscr_other1_preg, sev_con_other1),
+    sev_preg_other2 = calc_stage_sev(lscr_other2_preg, sev_con_other2)
+)
+
+lg_data_preg <-
+  lg_data_preg %>% 
+  mutate(
+    #subjective
+    sub_sev_preg_disas = calc_stage_sev(lscr_disas_preg, lscr_disas_sev),
+    sub_sev_preg_witacc = calc_stage_sev(lscr_witacc_preg, lscr_witacc_sev),
+    sub_sev_preg_acc = calc_stage_sev(lscr_acc_preg, lscr_acc_sev),
+    sub_sev_preg_famjail = calc_stage_sev(lscr_famjail_preg, lscr_famjail_sev),
+    sub_sev_preg_jail = calc_stage_sev(lscr_jail_preg, lscr_jail_sev),
+    sub_sev_preg_adopt = calc_stage_sev(lscr_adopt_preg, lscr_adopt_sev),
+    sub_sev_preg_pardivorce = calc_stage_sev(lscr_pardivorce_preg, lscr_pardivorce_sev),
+    sub_sev_preg_divorce = calc_stage_sev(lscr_divorce_preg, lscr_divorce_sev),
+    sub_sev_preg_money = calc_stage_sev(lscr_money_preg, lscr_money_sev),
+    sub_sev_preg_ill = calc_stage_sev(lscr_ill_preg, lscr_ill_sev),
+    sub_sev_preg_emoab = calc_stage_sev(lscr_emoab_preg, lscr_emoab_sev),
+    sub_sev_preg_physneg = calc_stage_sev(lscr_physneg_preg, lscr_physneg_sev),
+    sub_sev_preg_abort = calc_stage_sev(lscr_abort_preg, lscr_abort_sev),
+    sub_sev_preg_sepchild = calc_stage_sev(lscr_sepchild_preg, lscr_sepchild_sev),
+    sub_sev_preg_care = calc_stage_sev(lscr_care_preg, lscr_care_sev),
+    sub_sev_preg_death1 = calc_stage_sev(lscr_death1_preg, lscr_death1_sev),
+    sub_sev_preg_death2 = calc_stage_sev(lscr_death2_preg, lscr_death2_sev),
+    sub_sev_preg_famviol = calc_stage_sev(lscr_famviol_preg, lscr_famviol_sev),
+    sub_sev_preg_witmug = calc_stage_sev(lscr_witmug_preg, lscr_witmug_sev),
+    sub_sev_preg_mug = calc_stage_sev(lscr_mug_preg, lscr_mug_sev),
+    sub_sev_preg_physab = calc_stage_sev(lscr_physab_preg, lscr_physab_sev),
+    sub_sev_preg_domviol = calc_stage_sev(lscr_domviol_preg, lscr_domviol_sev),
+    sub_sev_preg_sexharas = calc_stage_sev(lscr_sexharas_preg, lscr_sexharas_sev),
+    sub_sev_preg_sextouch1 = calc_stage_sev(lscr_sextouch1_preg, lscr_sextouch1_sev),
+    sub_sev_preg_sextouch2 = calc_stage_sev(lscr_sextouch2_preg, lscr_sextouch2_sev),
+    sub_sev_preg_rape1 = calc_stage_sev(lscr_rape1_preg, lscr_rape1_sev),
+    sub_sev_preg_rape2 = calc_stage_sev(lscr_rape2_preg, lscr_rape2_sev),
+    sub_sev_preg_other1 = calc_stage_sev(lscr_other1_preg, lscr_other1_sev),
+    sub_sev_preg_other2 = calc_stage_sev(lscr_other2_preg, lscr_other2_sev)
+  ) 
+
+```
+
+```{r}
+lg_data_preg_wf <- 
+  lg_data_preg %>% 
+  select(
+    ID,
+    timepoint,
+    contains("sev")
+  ) %>% 
+  gather(variable, value, lscr_disas_sev:sub_sev_preg_other2) %>% 
+  unite(new, timepoint, variable) %>% 
+  spread(new, value)
+```
+        
+        
+```{r}
+sev_vars <- 
+  lg_data_preg_wf %>% 
+  select(
+    contains("sev_preg"),
+    -contains("sub")
+    ) %>% 
+  names()
+
+sub_sev_vars <-
+  lg_data_preg_wf %>% 
+  select(
+    contains("sub_sev_preg")
+  ) %>% 
+  names()
+```
+
+```{r}
+lg_data_preg_wf <-
+  lg_data_preg_wf %>% 
+  mutate_at(
+    vars(sev_vars),
+    as.double
+  ) %>% 
+  mutate_at(
+    vars(sub_sev_vars),
+    as.double
+  ) %>% 
+  mutate(
+    max_sev_preg = pmap_dbl(
+      select(., sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev_preg = pmap_dbl(
+      select(., sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    )
+  ) %>% 
+  mutate(
+    max_sev_preg = if_else(
+      max_sev_preg == -Inf,
+      0, max_sev_preg
+    ),
+    max_sub_sev_preg = if_else(
+      max_sub_sev_preg == -Inf,
+      0, max_sub_sev_preg
+    )
+  )
+```
+
+```{r}
+lg_data_num_types_preg <- 
+  lg_data_preg %>% 
+  gather(
+    event, 
+    endorsed, 
+    lscr_disas_preg,
+    lscr_witacc_preg,
+    lscr_acc_preg,
+    lscr_famjail_preg,
+    lscr_jail_preg,
+    lscr_adopt_preg,
+    lscr_pardivorce_preg,
+    lscr_divorce_preg,
+    lscr_money_preg,
+    lscr_ill_preg,
+    lscr_emoab_preg,
+    lscr_physneg_preg,
+    lscr_abort_preg,
+    lscr_sepchild_preg,
+    lscr_care_preg,
+    lscr_death1_preg,
+    lscr_death2_preg,
+    lscr_famviol_preg,
+    lscr_witmug_preg,
+    lscr_mug_preg,
+    lscr_physab_preg,
+    lscr_domviol_preg,
+    lscr_sexharas_preg,
+    lscr_sextouch1_preg,
+    lscr_sextouch2_preg,
+    lscr_rape1_preg,
+    lscr_rape2_preg,
+    lscr_other1_preg,
+    lscr_other2_preg
+  ) %>% 
+  select(ID, event, endorsed) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    endorsed = max(endorsed, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    endorsed = if_else(
+      endorsed == -Inf,
+      0, endorsed
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    num_types_preg = sum(endorsed)
+  )
+```
+
+```{r}
+lg_data_sum_sev_preg <- 
+  lg_data_preg %>% 
+  gather(
+    event, 
+    rating, 
+    sev_preg_disas:sev_preg_other2
+  ) %>% 
+  select(ID, event, rating) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    rating = max(rating, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    rating = if_else(
+      rating == -Inf,
+      0, rating
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    sum_sev_preg = sum(rating)
+  )
+```
+
+```{r}
+lg_data_sum_sub_sev_preg <- 
+  lg_data_preg %>% 
+  gather(
+    event, 
+    rating, 
+    sub_sev_preg_disas:sub_sev_preg_other2
+  ) %>% 
+  select(ID, event, rating) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    rating = max(rating, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    rating = if_else(
+      rating == -Inf,
+      0, rating
+    )
+  ) %>% 
+  group_by(ID) %>% 
+  summarise(
+    sum_sub_sev_preg = sum(rating)
+  )
+```
+
+```{r}
+lg_data_preg <-
+  lg_data_preg_wf %>% 
+  select(ID, max_sev_preg, max_sub_sev_preg) %>% 
+  left_join(lg_data_num_types_preg, by = "ID") %>% 
+  left_join(lg_data_sum_sev_preg, by = "ID") %>% 
+  left_join(lg_data_sum_sub_sev_preg, by = "ID")
+```
+
+
+## Postnatal stress: Longitudinal data
+
+```{r}
+post_exp_vars <-
+  lg_data_t3 %>% 
+  select(contains("baby")) %>% 
+  names()
+```
+
+```{r}
+lg_data_t3 <-
+  lg_data_t3 %>% 
+  mutate_at(
+    vars(post_exp_vars),
+    as.integer
+  ) %>% 
+  mutate(
+    #objective
+    sev_post_disas = calc_stage_sev(lscr_disas_baby, sev_con_disas),
+    sev_post_witacc = calc_stage_sev(lscr_witacc_baby, sev_con_witacc),
+    sev_post_acc = calc_stage_sev(lscr_acc_baby, sev_con_acc),
+    sev_post_famjail = calc_stage_sev(lscr_famjail_baby, sev_con_famjail),
+    sev_post_jail = calc_stage_sev(lscr_jail_baby, sev_con_jail),
+    #sev_post_adopt = calc_stage_sev(lscr_adopt_baby, sev_con_adopt),
+    sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_baby, sev_con_pardivorce),
+    #sev_post_divorce = calc_stage_sev(lscr_divorce_baby, sev_con_divorce),
+    sev_post_money = calc_stage_sev(lscr_money_baby, sev_con_money),
+    sev_post_ill = calc_stage_sev(lscr_ill_baby, sev_con_ill),
+    sev_post_emoab = calc_stage_sev(lscr_emoab_baby, sev_con_emoab),
+    #sev_post_physneg = calc_stage_sev(lscr_physneg_baby, sev_con_physneg),
+    #sev_post_abort = calc_stage_sev(lscr_abort_baby, sev_con_abort),
+    sev_post_sepchild = calc_stage_sev(lscr_sepchild_baby, sev_con_sepchild),
+    sev_post_care = calc_stage_sev(lscr_care_baby, sev_con_care),
+    sev_post_death1 = calc_stage_sev(lscr_death1_baby, sev_con_death1),
+    sev_post_death2 = calc_stage_sev(lscr_death2_baby, sev_con_death2),
+    #sev_post_famviol = calc_stage_sev(lscr_famviol_baby, sev_con_famviol),
+    sev_post_witmug = calc_stage_sev(lscr_witmug_baby, sev_con_witmug),
+    #sev_post_mug = calc_stage_sev(lscr_mug_baby, sev_con_mug),
+    #sev_post_physab = calc_stage_sev(lscr_physab_baby, sev_con_physab),
+    sev_post_domviol = calc_stage_sev(lscr_domviol_baby, sev_con_domviol),
+    sev_post_sexharas = calc_stage_sev(lscr_sexharas_baby, sev_con_sexharas),
+    #sev_post_sextouch1 = calc_stage_sev(lscr_sextouch1_baby, sev_con_sextouch1),
+    #sev_post_sextouch2 = calc_stage_sev(lscr_sextouch2_baby, sev_con_sextouch2),
+    #sev_post_rape1 = calc_stage_sev(lscr_rape1_baby, sev_con_rape1),
+    #sev_post_rape2 = calc_stage_sev(lscr_rape2_baby, sev_con_rape2),
+    sev_post_other1 = calc_stage_sev(lscr_other1_baby, sev_con_other1),
+    sev_post_other2 = calc_stage_sev(lscr_other2_baby, sev_con_other2)
+  )
+
+lg_data_t3 <-
+  lg_data_t3 %>% 
+  mutate(
+    #subjective
+    sub_sev_post_disas = calc_stage_sev(lscr_disas_baby, lscr_disas_sev),
+    sub_sev_post_witacc = calc_stage_sev(lscr_witacc_baby, lscr_witacc_sev),
+    sub_sev_post_acc = calc_stage_sev(lscr_acc_baby, lscr_acc_sev),
+    sub_sev_post_famjail = calc_stage_sev(lscr_famjail_baby, lscr_famjail_sev),
+    sub_sev_post_jail = calc_stage_sev(lscr_jail_baby, lscr_jail_sev),
+    #sub_sev_post_adopt = calc_stage_sev(lscr_adopt_baby, lscr_adopt_sev),
+    sub_sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_baby, lscr_pardivorce_sev),
+    #sub_sev_post_divorce = calc_stage_sev(lscr_divorce_baby, lscr_divorce_sev),
+    sub_sev_post_money = calc_stage_sev(lscr_money_baby, lscr_money_sev),
+    sub_sev_post_ill = calc_stage_sev(lscr_ill_baby, lscr_ill_sev),
+    sub_sev_post_emoab = calc_stage_sev(lscr_emoab_baby, lscr_emoab_sev),
+    #sub_sev_post_physneg = calc_stage_sev(lscr_physneg_baby, lscr_physneg_sev),
+    #sub_sev_post_abort = calc_stage_sev(lscr_abort_baby, lscr_abort_sev),
+    sub_sev_post_sepchild = calc_stage_sev(lscr_sepchild_baby, lscr_sepchild_sev),
+    sub_sev_post_care = calc_stage_sev(lscr_care_baby, lscr_care_sev),
+    sub_sev_post_death1 = calc_stage_sev(lscr_death1_baby, lscr_death1_sev),
+    sub_sev_post_death2 = calc_stage_sev(lscr_death2_baby, lscr_death2_sev),
+    #sub_sev_post_famviol = calc_stage_sev(lscr_famviol_baby, lscr_famviol_sev),
+    sub_sev_post_witmug = calc_stage_sev(lscr_witmug_baby, lscr_witmug_sev),
+    #sub_sev_post_mug = calc_stage_sev(lscr_mug_baby, lscr_mug_sev),
+    #sub_sev_post_physab = calc_stage_sev(lscr_physab_baby, lscr_physab_sev),
+    sub_sev_post_domviol = calc_stage_sev(lscr_domviol_baby, lscr_domviol_sev),
+    sub_sev_post_sexharas = calc_stage_sev(lscr_sexharas_baby, lscr_sexharas_sev),
+    #sub_sev_post_sextouch1 = calc_stage_sev(lscr_sextouch1_baby, lscr_sextouch1_sev),
+    #sub_sev_post_sextouch2 = calc_stage_sev(lscr_sextouch2_baby, lscr_sextouch2_sev),
+    #sub_sev_post_rape1 = calc_stage_sev(lscr_rape1_baby, lscr_rape1_sev),
+    #sub_sev_post_rape2 = calc_stage_sev(lscr_rape2_baby, lscr_rape2_sev),
+    sub_sev_post_other1 = calc_stage_sev(lscr_other1_baby, lscr_other1_sev),
+    sub_sev_post_other2 = calc_stage_sev(lscr_other2_baby, lscr_other2_sev)
+  ) 
+```
+
+
+```{r}
+post_sev_vars <-
+  lg_data_t3 %>% 
+  select(contains("sev_post")) %>% 
+  names() %>% 
+  str_replace("sub_", "") 
+
+post_sub_sev_vars <-
+  lg_data_t3 %>% 
+  select(contains("sub_sev_post")) %>% 
+  names() 
+```
+
+```{r}
+lg_data_t3 <-
+  lg_data_t3 %>% 
+  mutate(
+    num_types_post = pmap_int(
+      select(., post_exp_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    sum_sev_post = pmap_dbl(
+      select(., post_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sev_post =  pmap_dbl(
+      select(., post_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    sum_sub_sev_post = pmap_dbl(
+      select(., post_sub_sev_vars),
+      function(...) sum(c(...), na.rm = TRUE)
+    ),
+    max_sub_sev_post =  pmap_dbl(
+      select(., post_sub_sev_vars),
+      function(...) max(c(...), na.rm = TRUE)
+    ),
+    max_sev_post = if_else(
+      max_sev_post == -Inf,
+      0, max_sev_post
+    ),
+    max_sub_sev_post = if_else(
+      max_sev_post == -Inf,
+      0, max_sev_post
+    )
+  )
+```
+
+```{r}
+lg_data_post <-
+  lg_data_t3 %>% 
+  select(
+    ID,
+    num_types_post:max_sub_sev_post
+  )
+```
+
+## Combine longitudinal data
+
+```{r}
+lg_data <-
+  lg_data_lifetime %>% 
+  left_join(lg_data_preg, by = "ID") %>% 
+  left_join(lg_data_post, by = "ID")
+```
+
+# Combine cross-sectional and longitudinal data
+```{r}
+cs_data <- 
+  cs_data %>% 
+  select(
+    ID,
+    num_types:max_sub_sev,
+    num_types_preg:max_sub_sev_preg,
+    num_types_post:max_sub_sev_post
+  )
+
+all_data <-
+  cs_data %>% 
+  bind_rows(lg_data)
+
+glimpse(all_data)
+```
+
+## Histograms
+```{r}
+all_data %>% 
+  ggplot(aes(num_types)) +
+  geom_histogram(binwidth = 1)
+
+all_data %>% 
+  ggplot(aes(sum_sev)) +
+  geom_histogram(binwidth = 2)
+
+all_data %>% 
+  ggplot(aes(sum_sub_sev)) +
+  geom_histogram(binwidth = 2)
+
+all_data %>% 
+  ggplot(aes(num_types_preg)) +
+  geom_histogram(binwidth = 1)
+
+all_data %>% 
+  ggplot(aes(sum_sev_preg)) +
+  geom_histogram(binwidth = 1)
+
+all_data %>% 
+  ggplot(aes(sum_sub_sev_preg)) +
+  geom_histogram(binwidth = 1)
+
+all_data %>% 
+  ggplot(aes(num_types_post)) +
+  geom_histogram(binwidth = .5)
+
+all_data %>% 
+  ggplot(aes(sum_sev_post)) +
+  geom_histogram(binwidth = .5)
+
+all_data %>% 
+  ggplot(aes(sum_sub_sev_post)) +
+  geom_histogram(binwidth = .5)
+```
+
+
+```{r}
+write_csv(all_data, "~/Desktop/BABIES/stress_interview/data/lscr_all_data_20190827.csv")
+```
+
