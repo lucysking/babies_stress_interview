@@ -1,4 +1,0 @@
-"0","preg_exp_vars <- "
-"0","  lg_data %>% "
-"0","  select(contains(""preg"")) %>% "
-"0","  names()"

@@ -1,6 +1,0 @@
-"0","lg_data_preg <-"
-"0","  lg_data_preg_wf %>% "
-"0","  select(ID, max_sev_preg, max_sub_sev_preg) %>% "
-"0","  left_join(lg_data_num_types_preg, by = ""ID"") %>% "
-"0","  left_join(lg_data_sum_sev_preg, by = ""ID"") %>% "
-"0","  left_join(lg_data_sum_sub_sev_preg, by = ""ID"")"

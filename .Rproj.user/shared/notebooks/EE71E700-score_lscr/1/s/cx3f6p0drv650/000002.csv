@@ -1,6 +1,0 @@
-"0","lg_data_post <-"
-"0","  lg_data_t3 %>% "
-"0","  select("
-"0","    ID,"
-"0","    num_types_post:max_sub_sev_post"
-"0","  )"
