@@ -12,14 +12,16 @@ library(readxl)
 
 
 # cross-sectional data
-cs_stress_file1 <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201811_6mo_rated_cleaned.xlsx"
-cs_stress_file2 <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201904_6mo_rated_cleaned.xlsx"
-cs_dob_file <- "~/Desktop/BABIES/stress_interview/data/demo_data/cs_dob.csv"
-cs_visit_date_file <- "~/Desktop/BABIES/stress_interview/data/demo_data/cs_visit_date.csv"
+cs_stress_file1 <- "~/Box/lucy_king_files/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201811_6mo_rated_cleaned.xlsx"
+cs_stress_file2 <- "~/Box/lucy_king_files/BABIES/stress_interview/data/stress_rating_files/final_cleaned/cs_LSCR_201904_6mo_rated_cleaned.xlsx"
+cs_dob_file <- "~/Box/lucy_king_files/BABIES/stress_interview/data/demo_data/cs_dob.csv"
+cs_visit_date_file <- "~/Box/lucy_king_files/BABIES/stress_interview/data/demo_data/cs_visit_date.csv"
+lg_visit_date_file <- "~/Box/lucy_king_files/BABIES/stress_interview/data/demo_data/lg_visit_date.csv"
 
 # longitudinal data
-lg_stress_T1_file <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_201906_preg_rated_cleaned.xlsx"
-lg_stress_T3_file <- "~/Desktop/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_201907_6mo_rated_cleaned.xlsx"
+lg_stress_T1_file <- "~/Box/lucy_king_files/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_201906_preg_rated_cleaned.xlsx"
+lg_stress_T3_file <- "~/Box/lucy_king_files/BABIES/stress_interview/data/stress_rating_files/final_cleaned/long_LSCR_202002_6mo_rated_cleaned.xlsx"
+
 
 ```
 
@@ -141,6 +143,76 @@ cs_data <-
 
 
 ## Pregnancy stress: Cross-sectional data 
+```{r}
+cs_data <-
+  cs_data %>% 
+  mutate_at(
+    vars(mom_dob, baby_dob, baby_due_date, visit_date),
+    list(~parse_date_time2(., "mdy"))
+  ) %>% 
+  mutate(
+    mom_age_lsc6mo = (mom_dob %--% visit_date) / years(1),
+    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
+    conception_date = baby_due_date - weeks(38),
+    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
+  )
+```
+
+```{r}
+pregnancy_exp <- function(data, age, age_exp, preg_exp) {
+  age <- enquo(age)
+  age_exp <- enquo(age_exp)
+  preg_exp <- enquo(preg_exp)
+  var_name <- paste0(quo_name(exp), "_preg")
+  
+  data %>% 
+    mutate(
+      !!var_name :=
+        if_else(
+          !!age_exp >= !!age & (!!preg_exp == 1),
+          1, 0
+        )
+    )
+}
+
+```
+
+
+```{r}
+cs_data <-
+  cs_data %>% 
+  pregnancy_exp(mom_age_concept, lscr_disas_age_off, lscr_disas_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_acc_age_off, lscr_acc_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_witacc_age_off, lscr_witacc_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_famjail_age_off, lscr_famjail_preg) %>%
+  pregnancy_exp(mom_age_concept, lscr_jail_age_off, lscr_jail_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_adopt_age_off, lscr_adopt_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_pardivorce_age_off, lscr_pardivorce_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_divorce_age_off, lscr_divorce_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_money_age_off, lscr_money_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_ill_age_off, lscr_ill_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_emoab_age_off, lscr_emoab_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_physneg_age_off, lscr_physneg_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_abort_age_off, lscr_abort_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sepchild_age_off, lscr_sepchild_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_care_age_off, lscr_care_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_death1_age_off, lscr_death1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_death2_age_off, lscr_death2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_famviol_age_off, lscr_famviol_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_witmug_age_off, lscr_witmug_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_mug_age_off, lscr_mug_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_physab_age_off, lscr_physab_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_domviol_age_off, lscr_domviol_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sexharas_age_off, lscr_sexharas_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sextouch1_age_off, lscr_sextouch1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sextouch2_age_off, lscr_sextouch2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_rape1_age_off, lscr_rape1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_rape2_age_off, lscr_rape2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_other1_age_off, lscr_other1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_other2_age_off, lscr_other2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_other3_age_off, lscr_other3_preg)
+```
+
 
 ```{r}
 preg_exp_vars <- 
@@ -286,20 +358,6 @@ cs_data <-
 ```
 
 ## Preconception stress: Cross-sectional data
-```{r}
-cs_data <-
-  cs_data %>% 
-  mutate_at(
-    vars(mom_dob, baby_dob, baby_due_date, visit_date),
-    list(~parse_date_time2(., "mdy"))
-  ) %>% 
-  mutate(
-    mom_age_lsc6mo = (mom_dob %--% visit_date) / years(1),
-    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
-    conception_date = baby_due_date - weeks(38),
-    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
-  )
-```
 
 ```{r}
 preconception_exp <- function(data, age, exp, age_exp, preg_exp) {
@@ -868,6 +926,28 @@ cs_data <-
   )
 ```
 
+```{r}
+cs_data_types <-
+  cs_data %>% 
+  select(
+    ID,
+    exp_vars,
+    childhood_exp_vars,
+    prec_exp_vars,
+    preg_exp_vars,
+    post_exp_vars
+  ) %>% 
+  mutate_at(
+    vars(-ID),
+    as.double
+  ) %>% 
+  mutate_at(
+    vars(-ID),
+    funs(
+      if_else(is.na(.) | . == 0, 0, .)
+    )
+  )
+```
 
 
 # Score Longitudinal LSC-R Data 
@@ -893,6 +973,15 @@ lg_data_t1 <-
   ) %>% 
   mutate(
     ID = as.double(ID)
+  ) %>% 
+  left_join(
+    read_csv(lg_visit_date_file),
+    by = "ID"
+  ) %>% 
+  mutate(
+    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
+    conception_date = due_date - weeks(38),
+    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
   )
 ```
 
@@ -910,12 +999,34 @@ lg_data_t3 <-
   ) %>% 
   rename(
     ID = record_id
+  )  %>% 
+  left_join(
+    read_csv(lg_visit_date_file),
+    by = "ID"
+  ) %>% 
+  mutate(
+    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
+    conception_date = due_date - weeks(38),
+    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
   )
 ```
 
 ```{r}
 lg_data <-
-  bind_rows(lg_data_t1, lg_data_t3)
+  bind_rows(
+    lg_data_t1 %>% select(-visit_date_t1:-mom_age_concept),
+    lg_data_t3 %>% select(-visit_date_t1:-mom_age_concept)
+    ) %>% 
+  left_join(
+    read_csv(lg_visit_date_file),
+    by = "ID"
+  ) %>% 
+  mutate(
+    mom_age_birth = (mom_dob %--% baby_dob) / years(1),
+    conception_date = due_date - weeks(38),
+    mom_age_concept = ((mom_dob %--% conception_date) / years(1)) 
+  )
+
 ```
 
 ## Lifetime stress: Longitudinal data 
@@ -983,7 +1094,6 @@ lg_data_wf <-
       0, max_sub_sev
     )
   )
-
 ```
 
 ```{r}
@@ -1038,9 +1148,59 @@ lg_data_num_types <-
   summarise(
     num_types = sum(endorsed)
   )
-
 ```
 
+```{r}
+lg_data_types <- 
+  lg_data %>% 
+  select(
+    ID,
+    lscr_disas,
+    lscr_witacc,
+    lscr_acc,
+    lscr_famjail,
+    lscr_jail,
+    lscr_adopt,
+    lscr_pardivorce,
+    lscr_divorce,
+    lscr_money,
+    lscr_ill,
+    lscr_emoab,
+    lscr_emoab_2,
+    lscr_physneg,
+    lscr_abort,
+    lscr_sepchild,
+    lscr_care,
+    lscr_death1,
+    lscr_death2,
+    lscr_famviol,
+    lscr_witmug,
+    lscr_mug,
+    lscr_physab,
+    lscr_domviol,
+    lscr_sexharas,
+    lscr_sextouch1,
+    lscr_sextouch2,
+    lscr_rape1,
+    lscr_rape2,
+    lscr_other1,
+    lscr_other2
+  ) %>% 
+  gather(
+    event, 
+    endorsed, 
+    -ID
+  ) %>% 
+  select(ID, event, endorsed) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    endorsed = max(endorsed)
+  ) %>% 
+  spread(event, endorsed) 
+```
+
+
+  
 ```{r}
 lg_data_sum_sev <- 
   lg_data %>% 
@@ -1091,7 +1251,7 @@ lg_data_sum_sub_sev <-
   ) %>% 
   group_by(ID) %>% 
   summarise(
-    sum_sub_sev = sum(rating)
+    sum_sub_sev = sum(rating, na.rm = TRUE)
   )
 ```
 
@@ -1107,10 +1267,47 @@ lg_data_lifetime <-
 ## Pregnancy stress: Longitudinal data 
 
 ```{r}
+lg_data <-
+  lg_data %>% 
+  pregnancy_exp(mom_age_concept, lscr_disas_age_off, lscr_disas_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_acc_age_off, lscr_acc_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_witacc_age_off, lscr_witacc_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_famjail_age_off, lscr_famjail_preg) %>%
+  pregnancy_exp(mom_age_concept, lscr_jail_age_off, lscr_jail_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_adopt_age_off, lscr_adopt_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_pardivorce_age_off, lscr_pardivorce_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_divorce_age_off, lscr_divorce_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_money_age_off, lscr_money_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_ill_age_off, lscr_ill_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_emoab_age_off, lscr_emoab_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_emoab_age_2_off, lscr_emoab_preg_2) %>% 
+  pregnancy_exp(mom_age_concept, lscr_physneg_age_off, lscr_physneg_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_abort_age_off, lscr_abort_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sepchild_age_off, lscr_sepchild_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_care_age_off, lscr_care_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_death1_age_off, lscr_death1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_death2_age_off, lscr_death2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_famviol_age_off, lscr_famviol_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_witmug_age_off, lscr_witmug_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_mug_age_off, lscr_mug_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_physab_age_off, lscr_physab_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_domviol_age_off, lscr_domviol_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sexharas_age_off, lscr_sexharas_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sextouch1_age_off, lscr_sextouch1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_sextouch2_age_off, lscr_sextouch2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_rape1_age_off, lscr_rape1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_rape2_age_off, lscr_rape2_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_other1_age_off, lscr_other1_preg) %>% 
+  pregnancy_exp(mom_age_concept, lscr_other2_age_off, lscr_other2_preg) 
+```
+
+```{r}
 preg_exp_vars <- 
   lg_data %>% 
   select(contains("preg")) %>% 
-  names()
+  select(-`.Primitive(\"exp\")_preg`) %>% 
+  names() 
+
 ```
 
 ```{r}
@@ -1187,7 +1384,6 @@ lg_data_preg <-
     sub_sev_preg_other1 = calc_stage_sev(lscr_other1_preg, lscr_other1_sev),
     sub_sev_preg_other2 = calc_stage_sev(lscr_other2_preg, lscr_other2_sev)
   ) 
-
 ```
 
 ```{r}
@@ -1202,7 +1398,6 @@ lg_data_preg_wf <-
   unite(new, timepoint, variable) %>% 
   spread(new, value)
 ```
-        
         
 ```{r}
 sev_vars <- 
@@ -1308,6 +1503,57 @@ lg_data_num_types_preg <-
 ```
 
 ```{r}
+lg_data_types_preg <- 
+  lg_data_preg %>% 
+  select(
+    ID,
+    lscr_disas_preg,
+    lscr_witacc_preg,
+    lscr_acc_preg,
+    lscr_famjail_preg,
+    lscr_jail_preg,
+    lscr_adopt_preg,
+    lscr_pardivorce_preg,
+    lscr_divorce_preg,
+    lscr_money_preg,
+    lscr_ill_preg,
+    lscr_emoab_preg,
+    lscr_physneg_preg,
+    lscr_abort_preg,
+    lscr_sepchild_preg,
+    lscr_care_preg,
+    lscr_death1_preg,
+    lscr_death2_preg,
+    lscr_famviol_preg,
+    lscr_witmug_preg,
+    lscr_mug_preg,
+    lscr_physab_preg,
+    lscr_domviol_preg,
+    lscr_sexharas_preg,
+    lscr_sextouch1_preg,
+    lscr_sextouch2_preg,
+    lscr_rape1_preg,
+    lscr_rape2_preg,
+    lscr_other1_preg,
+    lscr_other2_preg
+  ) %>% 
+  gather(
+    event, 
+    endorsed, 
+    -ID
+  ) %>% 
+  group_by(ID, event) %>% 
+  summarise(
+    endorsed = max(endorsed)
+  ) %>% 
+  spread(event, endorsed)
+
+lg_data_types <-
+  lg_data_types %>% 
+  left_join(lg_data_types_preg, by = "ID")
+```
+
+```{r}
 lg_data_sum_sev_preg <- 
   lg_data_preg %>% 
   gather(
@@ -1370,54 +1616,37 @@ lg_data_preg <-
 ## Preconception stress: Longitudinal data
 
 ```{r}
-preconception_exp <- function(data, exp, preg_exp) {
-  exp <- enquo(exp)
-  preg_exp <- enquo(preg_exp)
-  var_name <- paste0(quo_name(exp), "_prec")
-  
-  data %>% 
-    mutate(
-      !! var_name :=
-        if_else(
-          !!exp == 1 & (!!preg_exp == 0 | is.na(!!preg_exp)),
-          1, 0
-        )
-    )
-}
-```
-
-```{r}
 lg_data_t1 <-
   lg_data_t1 %>% 
-  preconception_exp(lscr_disas, lscr_disas_preg) %>% 
-  preconception_exp(lscr_acc, lscr_acc_preg) %>% 
-  preconception_exp(lscr_witacc, lscr_witacc_preg) %>% 
-  preconception_exp(lscr_famjail, lscr_famjail_preg) %>%
-  preconception_exp(lscr_jail, lscr_jail_preg) %>% 
-  preconception_exp(lscr_adopt, lscr_adopt_preg) %>% 
-  preconception_exp(lscr_pardivorce, lscr_pardivorce_preg) %>% 
-  preconception_exp(lscr_divorce, lscr_divorce_preg) %>% 
-  preconception_exp(lscr_money, lscr_money_preg) %>% 
-  preconception_exp(lscr_ill, lscr_ill_preg) %>% 
-  preconception_exp(lscr_emoab, lscr_emoab_preg) %>% 
-  preconception_exp(lscr_physneg, lscr_physneg_preg) %>% 
-  preconception_exp(lscr_abort, lscr_abort_preg) %>% 
-  preconception_exp(lscr_sepchild, lscr_sepchild_preg) %>% 
-  preconception_exp(lscr_care, lscr_care_preg) %>% 
-  preconception_exp(lscr_death1, lscr_death1_preg) %>% 
-  preconception_exp(lscr_death2, lscr_death2_preg) %>% 
-  preconception_exp(lscr_famviol, lscr_famviol_preg) %>% 
-  preconception_exp(lscr_witmug, lscr_witmug_preg) %>% 
-  preconception_exp(lscr_mug, lscr_mug_preg) %>% 
-  preconception_exp(lscr_physab, lscr_physab_preg) %>% 
-  preconception_exp(lscr_domviol, lscr_domviol_preg) %>% 
-  preconception_exp(lscr_sexharas, lscr_sexharas_preg) %>% 
-  preconception_exp(lscr_sextouch1, lscr_sextouch1_preg) %>% 
-  preconception_exp(lscr_sextouch2, lscr_sextouch2_preg) %>% 
-  preconception_exp(lscr_rape1, lscr_rape1_preg) %>% 
-  preconception_exp(lscr_rape2, lscr_rape2_preg) %>% 
-  preconception_exp(lscr_other1, lscr_other1_preg) %>% 
-  preconception_exp(lscr_other2, lscr_other2_preg) 
+  preconception_exp(mom_age_concept, lscr_disas, lscr_disas_age_off, lscr_disas_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_acc, lscr_acc_age_off, lscr_acc_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_witacc, lscr_witacc_age_off, lscr_witacc_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_famjail, lscr_famjail_age_off, lscr_famjail_preg) %>%
+  preconception_exp(mom_age_concept, lscr_jail, lscr_jail_age_off, lscr_jail_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_adopt, lscr_adopt_age_off, lscr_adopt_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_pardivorce, lscr_pardivorce_age_off, lscr_pardivorce_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_divorce, lscr_divorce_age_off, lscr_divorce_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_money, lscr_money_age_off, lscr_money_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_ill, lscr_ill_age_off, lscr_ill_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_emoab, lscr_emoab_age_off, lscr_emoab_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_physneg, lscr_physneg_age_off, lscr_physneg_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_abort, lscr_abort_age_off, lscr_abort_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_sepchild, lscr_sepchild_age_off, lscr_sepchild_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_care, lscr_care_age_off, lscr_care_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_death1, lscr_death1_age_off, lscr_death1_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_death2, lscr_death2_age_off, lscr_death2_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_famviol, lscr_famviol_age_off, lscr_famviol_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_witmug, lscr_witmug_age_off, lscr_witmug_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_mug, lscr_mug_age_off, lscr_mug_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_physab, lscr_physab_age_off, lscr_physab_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_domviol, lscr_domviol_age_off, lscr_domviol_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_sexharas, lscr_sexharas_age_off, lscr_sexharas_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_sextouch1, lscr_sextouch1_age_off, lscr_sextouch1_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_sextouch2, lscr_sextouch2_age_off, lscr_sextouch2_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_rape1, lscr_rape1_age_off, lscr_rape1_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_rape2, lscr_rape2_age_off, lscr_rape2_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_other1, lscr_other1_age_off, lscr_other1_preg) %>% 
+  preconception_exp(mom_age_concept, lscr_other2, lscr_other2_age_off, lscr_other2_preg) 
 ```
 
 ```{r}
@@ -1517,6 +1746,19 @@ prec_sub_sev_vars <-
 ```
 
 ```{r}
+lg_data_types <-
+  lg_data_types %>% 
+  left_join(
+    lg_data_t1 %>% 
+      select(
+        ID, 
+        prec_exp_vars
+      ),
+    by = "ID"
+  )
+```
+
+```{r}
 lg_data_t1 <-
   lg_data_t1 %>% 
   mutate(
@@ -1549,7 +1791,6 @@ lg_data_t1 <-
       0, max_sev_prec
     )
   )
-
 ```
 
 ## Childhood stress: Longitudinal data
@@ -1672,6 +1913,19 @@ lg_data_t1 <-
 ```
 
 ```{r}
+lg_data_types <-
+  lg_data_types %>% 
+  left_join(
+    lg_data_t1 %>% 
+      select(
+        ID, 
+        childhood_exp_vars
+      ),
+    by = "ID"
+  )
+```
+
+```{r}
 childhood_sev_vars <-
   lg_data_t1 %>% 
   select(contains("sev_child")) %>% 
@@ -1724,7 +1978,9 @@ lg_data_t1 <-
 post_exp_vars <-
   lg_data_t3 %>% 
   select(contains("baby")) %>% 
-  names()
+  select(-baby_dob) %>% 
+  names() 
+
 ```
 
 ```{r}
@@ -1743,7 +1999,7 @@ lg_data_t3 <-
     sev_post_jail = calc_stage_sev(lscr_jail_baby, sev_con_jail),
     #sev_post_adopt = calc_stage_sev(lscr_adopt_baby, sev_con_adopt),
     sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_baby, sev_con_pardivorce),
-    #sev_post_divorce = calc_stage_sev(lscr_divorce_baby, sev_con_divorce),
+    sev_post_divorce = calc_stage_sev(lscr_divorce_baby, sev_con_divorce),
     sev_post_money = calc_stage_sev(lscr_money_baby, sev_con_money),
     sev_post_ill = calc_stage_sev(lscr_ill_baby, sev_con_ill),
     sev_post_emoab = calc_stage_sev(lscr_emoab_baby, sev_con_emoab),
@@ -1778,7 +2034,7 @@ lg_data_t3 <-
     sub_sev_post_jail = calc_stage_sev(lscr_jail_baby, lscr_jail_sev),
     #sub_sev_post_adopt = calc_stage_sev(lscr_adopt_baby, lscr_adopt_sev),
     sub_sev_post_pardivorce = calc_stage_sev(lscr_pardivorce_baby, lscr_pardivorce_sev),
-    #sub_sev_post_divorce = calc_stage_sev(lscr_divorce_baby, lscr_divorce_sev),
+    sub_sev_post_divorce = calc_stage_sev(lscr_divorce_baby, lscr_divorce_sev),
     sub_sev_post_money = calc_stage_sev(lscr_money_baby, lscr_money_sev),
     sub_sev_post_ill = calc_stage_sev(lscr_ill_baby, lscr_ill_sev),
     sub_sev_post_emoab = calc_stage_sev(lscr_emoab_baby, lscr_emoab_sev),
@@ -1803,6 +2059,36 @@ lg_data_t3 <-
   ) 
 ```
 
+```{r}
+lg_data_types <-
+  lg_data_types %>% 
+  left_join(
+    lg_data_t3 %>% 
+      select(
+        ID,
+        post_exp_vars
+      ),
+    by = "ID"
+  ) %>% 
+  rename_at(
+    vars(contains("baby")),
+    funs(str_replace(., "baby", "post"))
+  ) %>% 
+  left_join(lg_data_t3 %>% select(ID, t3_complete), by = "ID") %>% 
+  mutate_at(
+    vars(contains("post")),
+    as.double
+  ) %>% 
+  mutate_at(
+    vars(contains("post")),
+    funs(
+      if_else(
+        t3_complete == 1 & is.na(.), 
+        0, .
+      )
+    )
+  )
+```
 
 ```{r}
 post_sev_vars <-
@@ -1877,9 +2163,17 @@ lg_data <-
   ) %>% 
   left_join(lg_data_preg, by = "ID") %>% 
   left_join(lg_data_post, by = "ID") 
+
 ```
 
+
 # Combine cross-sectional and longitudinal data
+```{r}
+all_data_exp <-
+  cs_data_types %>% 
+  bind_rows(lg_data_types)
+```
+
 ```{r}
 cs_data <- 
   cs_data %>% 
@@ -1888,7 +2182,8 @@ cs_data <-
     num_types:max_sub_sev,
     num_types_prec:max_sub_sev_prec,
     num_types_preg:max_sub_sev_preg,
-    num_types_post:max_sub_sev_post
+    num_types_post:max_sub_sev_post,
+    num_types_child:max_sub_sev_child
   )
 
 all_data <-
@@ -1959,8 +2254,11 @@ all_data %>%
   geom_histogram(binwidth = .5)
 ```
 
+```{r}
+write_csv(all_data_exp, "~/Box/lucy_king_files/BABIES/stress_interview/data/lscr_all_data_exp_20200824.csv")
+```
 
 ```{r}
-write_csv(all_data, "~/Desktop/BABIES/stress_interview/data/lscr_all_data_20191114.csv")
+write_csv(all_data, "~/Box/lucy_king_files/BABIES/stress_interview/data/lscr_all_data_20200824.csv")
 ```
 

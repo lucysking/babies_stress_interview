@@ -1,6 +1,0 @@
-"0","```r
-lscr_preg %>% 
-  ggplot(aes(sum_sev_childhood)) +
-  geom_histogram(bins = 15) +
-  labs(x = \"Childhood stress severity\")
-```"

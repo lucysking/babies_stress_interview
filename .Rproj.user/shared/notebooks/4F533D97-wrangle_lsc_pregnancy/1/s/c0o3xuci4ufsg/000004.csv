@@ -1,7 +1,0 @@
-"0","```r
-lscr_preg %>% 
-  count(maltreated) %>% 
-  mutate(
-    per = n / sum(n)
-  )
-```"
