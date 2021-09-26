@@ -1,9 +1,9 @@
 {
-    "path" : "~/Desktop/BABIES/life_stressor_checklist",
-    "sortOrder" : [
+    "path": "~/Desktop/BABIES/lena_18mo_symptoms",
+    "sortOrder": [
         {
-            "ascending" : true,
-            "columnIndex" : 2
+            "columnIndex": 2,
+            "ascending": true
         }
     ]
 }
